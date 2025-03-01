@@ -28,10 +28,9 @@
             <ul id="onlineUsers" class="mt-2 bg-gray-200 dark:bg-gray-700 p-4 rounded grid grid-cols-2 gap-4"></ul>
             
             <h2 class="text-2xl font-semibold mt-6">🗣️ Chat Room</h2>
-            <div class="border p-4 rounded mt-2 bg-gray-200 dark:bg-gray-700 h-48 overflow-y-auto" id="chatRoom"></div>
+            <div id="chatRoom" class="border p-4 rounded mt-2 bg-gray-200 dark:bg-gray-700 h-48 overflow-y-auto"></div>
             <input id="chatInput" type="text" placeholder="Ketik pesan..." class="mt-2 px-4 py-2 w-full border rounded shadow">
             <button onclick="sendChat()" class="mt-2 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 w-full">Kirim</button>
-            <button onclick="sendVoiceMessage()" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 w-full">🎤 Kirim Suara</button>
         </div>
     </div>
 
@@ -57,7 +56,6 @@
                         localStorage.setItem("profilePic", profilePicUrl);
                         document.getElementById("userAvatar").src = profilePicUrl;
                         document.getElementById("userAvatar").classList.remove("hidden");
-
                         addOnlineUser(username, profilePicUrl);
                     };
                     reader.readAsDataURL(profilePic);
@@ -82,28 +80,24 @@
         function sendChat() {
             let chat = document.getElementById("chatInput").value;
             if(chat.trim() !== "") {
-                let chatRoom = document.getElementById("chatRoom");
                 let message = { username, profilePicUrl, chat };
-
                 chatMessages.push(message);
                 localStorage.setItem("chatMessages", JSON.stringify(chatMessages));
-
-                displayChatMessage(message);
+                displayChatMessages();
                 document.getElementById("chatInput").value = "";
             }
         }
 
-        function displayChatMessage(message) {
+        function displayChatMessages() {
             let chatRoom = document.getElementById("chatRoom");
-            chatRoom.innerHTML += `
-                <div class='flex items-center space-x-2 mt-2'>
-                    <img src='${message.profilePicUrl}' class='w-8 h-8 rounded-full border-2 border-gray-400'>
-                    <p><strong>${message.username}:</strong> ${message.chat}</p>
-                </div>`;
-        }
-
-        function sendVoiceMessage() {
-            alert("Fitur pesan suara segera hadir! 🎤");
+            chatRoom.innerHTML = "";
+            chatMessages.forEach(message => {
+                chatRoom.innerHTML += `
+                    <div class='flex items-center space-x-2 mt-2'>
+                        <img src='${message.profilePicUrl}' class='w-8 h-8 rounded-full border-2 border-gray-400'>
+                        <p><strong>${message.username}:</strong> ${message.chat}</p>
+                    </div>`;
+            });
         }
 
         function updateOnlineUsers() {
@@ -133,15 +127,9 @@
                 document.getElementById("welcomeMessage").textContent = "Halo, " + username;
                 document.getElementById("registerSection").classList.add("hidden");
                 document.getElementById("mainContent").classList.remove("hidden");
-                if (profilePicUrl) {
-                    document.getElementById("userAvatar").src = profilePicUrl;
-                    document.getElementById("userAvatar").classList.remove("hidden");
-                }
-            } else {
-                document.getElementById("registerSection").classList.remove("hidden");
             }
             updateOnlineUsers();
-            chatMessages.forEach(displayChatMessage);
+            displayChatMessages();
         }
 
         document.getElementById("chatInput").addEventListener("keypress", function(event) {
