@@ -6,7 +6,7 @@
     <title>Friendship Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gradient-to-br from-pink-400 to-purple-600 text-white transition-all">
+<body class="bg-gradient-to-br from-pink-400 to-purple-600 text-white">
     <div class="max-w-2xl mx-auto p-6 bg-white dark:bg-gray-900 rounded-lg shadow-2xl mt-10 text-gray-900 dark:text-white">
         <h1 class="text-4xl font-bold text-center mb-6">💬 Admin Arisan</h1>
         
@@ -17,13 +17,6 @@
         </div>
         
         <div id="mainContent" class="hidden">
-            <div class="flex items-center space-x-4 mb-4">
-                <img id="userAvatar" class="w-16 h-16 rounded-full hidden border-2 border-pink-500" alt="Profile Picture">
-                <p id="welcomeMessage" class="text-xl font-semibold"></p>
-                <span id="status" class="text-sm text-green-500">🟢 Online</span>
-                <button onclick="logout()" class="ml-auto px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">Keluar</button>
-            </div>
-            
             <h2 class="text-2xl font-semibold">👥 Anggota Online</h2>
             <ul id="onlineUsers" class="mt-2 bg-gray-200 dark:bg-gray-700 p-4 rounded grid grid-cols-2 gap-4"></ul>
             
@@ -35,101 +28,94 @@
     </div>
 
     <script>
-        let username = localStorage.getItem("username") || "";
-        let profilePicUrl = localStorage.getItem("profilePic") || "";
-        let onlineUsers = JSON.parse(localStorage.getItem("onlineUsers")) || [];
-        let chatMessages = JSON.parse(localStorage.getItem("chatMessages")) || [];
+        const users = JSON.parse(localStorage.getItem("users")) || [];
+        const messages = JSON.parse(localStorage.getItem("messages")) || [];
 
         function registerUser() {
-            let inputName = document.getElementById("username").value;
-            let profilePic = document.getElementById("profilePic").files[0];
+            const name = document.getElementById("username").value;
+            const profilePic = document.getElementById("profilePic").files[0];
             
-            if(inputName.trim() !== "") {
-                username = inputName;
-                localStorage.setItem("username", username);
-                document.getElementById("welcomeMessage").textContent = "Halo, " + username;
-                
-                if(profilePic) {
-                    let reader = new FileReader();
-                    reader.onload = function(e) {
-                        profilePicUrl = e.target.result;
-                        localStorage.setItem("profilePic", profilePicUrl);
-                        document.getElementById("userAvatar").src = profilePicUrl;
-                        document.getElementById("userAvatar").classList.remove("hidden");
-                        addOnlineUser(username, profilePicUrl);
-                    };
-                    reader.readAsDataURL(profilePic);
-                } else {
-                    addOnlineUser(username, profilePicUrl);
-                }
-                
-                document.getElementById("registerSection").classList.add("hidden");
-                document.getElementById("mainContent").classList.remove("hidden");
+            if (!name.trim()) return;
+            
+            let user = users.find(user => user.name === name);
+            if (!user) {
+                user = { name, profilePicUrl: "" };
+                users.push(user);
             }
+            
+            if (profilePic) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    user.profilePicUrl = e.target.result;
+                    localStorage.setItem("users", JSON.stringify(users));
+                    updateUserList();
+                };
+                reader.readAsDataURL(profilePic);
+            }
+            
+            localStorage.setItem("currentUser", JSON.stringify(user));
+            updateUserList();
+            showChat();
         }
 
-        function addOnlineUser(name, profile) {
-            let userExists = onlineUsers.some(user => user.name === name);
-            if (!userExists) {
-                onlineUsers.push({ name, profile, status: "🟢 Online" });
-                localStorage.setItem("onlineUsers", JSON.stringify(onlineUsers));
-            }
-            updateOnlineUsers();
+        function updateUserList() {
+            const onlineUsersList = document.getElementById("onlineUsers");
+            onlineUsersList.innerHTML = "";
+            users.forEach(user => {
+                onlineUsersList.innerHTML += `
+                    <li class='flex items-center space-x-2 bg-gray-100 p-2 rounded shadow'>
+                        <img src='${user.profilePicUrl || "default.png"}' class='w-8 h-8 rounded-full border-2 border-green-500'>
+                        <span>${user.name} 🟢 Online</span>
+                    </li>
+                `;
+            });
+        }
+
+        function showChat() {
+            document.getElementById("registerSection").classList.add("hidden");
+            document.getElementById("mainContent").classList.remove("hidden");
+            displayMessages();
         }
 
         function sendChat() {
-            let chat = document.getElementById("chatInput").value;
-            if(chat.trim() !== "") {
-                let message = { username, profilePicUrl, chat };
-                chatMessages.push(message);
-                localStorage.setItem("chatMessages", JSON.stringify(chatMessages));
-                displayChatMessages();
-                document.getElementById("chatInput").value = "";
-            }
+            const chatInput = document.getElementById("chatInput");
+            const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+            
+            if (!chatInput.value.trim()) return;
+            
+            const message = {
+                sender: currentUser.name,
+                profilePic: currentUser.profilePicUrl,
+                text: chatInput.value,
+                timestamp: new Date().toLocaleTimeString()
+            };
+            
+            messages.push(message);
+            localStorage.setItem("messages", JSON.stringify(messages));
+            displayMessages();
+            chatInput.value = "";
         }
 
-        function displayChatMessages() {
-            let chatRoom = document.getElementById("chatRoom");
+        function displayMessages() {
+            const chatRoom = document.getElementById("chatRoom");
             chatRoom.innerHTML = "";
-            chatMessages.forEach(message => {
+            messages.forEach(msg => {
                 chatRoom.innerHTML += `
-                    <div class='flex items-center space-x-2 mt-2'>
-                        <img src='${message.profilePicUrl}' class='w-8 h-8 rounded-full border-2 border-gray-400'>
-                        <p><strong>${message.username}:</strong> ${message.chat}</p>
+                    <div class='flex items-start space-x-2 mt-2 bg-gray-100 p-2 rounded'>
+                        <img src='${msg.profilePic || "default.png"}' class='w-8 h-8 rounded-full border-2 border-gray-400'>
+                        <div>
+                            <p><strong>${msg.sender}</strong> <span class='text-sm text-gray-500'>${msg.timestamp}</span></p>
+                            <p>${msg.text}</p>
+                            <button onclick='replyTo("${msg.sender}")' class='text-blue-500 text-sm'>Balas</button>
+                        </div>
                     </div>`;
             });
         }
 
-        function updateOnlineUsers() {
-            let list = document.getElementById("onlineUsers");
-            list.innerHTML = "";
-            onlineUsers.forEach(user => {
-                list.innerHTML += `
-                    <li class='flex items-center space-x-2 bg-gray-100 dark:bg-gray-800 p-2 rounded shadow'>
-                        <img src='${user.profile}' class='w-8 h-8 rounded-full border-2 border-green-500'>
-                        <span>${user.name} ${user.status}</span>
-                    </li>`;
-            });
-        }
-
-        function logout() {
-            onlineUsers = onlineUsers.filter(user => user.name !== username);
-            localStorage.setItem("onlineUsers", JSON.stringify(onlineUsers));
-            localStorage.removeItem("username");
-            localStorage.removeItem("profilePic");
-            document.getElementById("mainContent").classList.add("hidden");
-            document.getElementById("registerSection").classList.remove("hidden");
-            updateOnlineUsers();
-        }
-
-        function loadUserData() {
-            if (username) {
-                document.getElementById("welcomeMessage").textContent = "Halo, " + username;
-                document.getElementById("registerSection").classList.add("hidden");
-                document.getElementById("mainContent").classList.remove("hidden");
-            }
-            updateOnlineUsers();
-            displayChatMessages();
+        function replyTo(sender) {
+            const chatInput = document.getElementById("chatInput");
+            chatInput.value = `@${sender} `;
+            chatInput.focus();
         }
 
         document.getElementById("chatInput").addEventListener("keypress", function(event) {
@@ -138,7 +124,8 @@
             }
         });
 
-        loadUserData();
+        updateUserList();
+        displayMessages();
     </script>
 </body>
 </html>
